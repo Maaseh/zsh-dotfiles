@@ -103,7 +103,8 @@ function repo-management() {
 			done
 			echo "Repository creation..."
 			mkdir "$GA_Filepath"/"$GA_Name"
-			git -C $GA_Filepath/"$GA_Name" init
+			touch "$GA_Filepath"/"$GA_Name"/.gitignore
+			git -C "$GA_Filepath"/"$GA_Name" init
 			gh repo create "$GA_Name" $GA_Visibility --description "$GA_Description" --source "$GA_Filepath" $GA_Readme
 			echo "$GA_Name has been created. Location: $GA_Filepath"; return 0 
 		;;
@@ -132,6 +133,81 @@ function repo-management() {
 			fi
 		;;
 
-		esac
+		"Change the visibility")
+			Repo_Selected=$(select-repo "Please select a repo you want to change the visibility")
+			CURRENT_VISIBILITY=$(gh repo view "$Repo_Selected" --json visibility --jq '.visibility')
+			if [[ "$CURRENT_VISIBILITY" == "PUBLIC" ]]; then
+        			if confirm-action "Change visibility from PUBLIC to PRIVATE?"; then
+            				gh repo edit "$Repo_Selected" --visibility private
+            				echo "Repository visibility changed to private"
+        			fi
+    			else
+        			if confirm-action "Change visibility from PRIVATE to PUBLIC?"; then
+            				gh repo edit "$Repo_Selected" --visibility public
+            				echo "Repository visibility changed to public"
+        			fi
+    			fi
+		;;
+
+		"Rename a repo")
+			Repo_Selected=$(select-repo "Please select a repo you want to rename")
+			echo -n "Please enter the new repo's name: "
+			read New_Repo_Name
+			if confirm-action "Are you sure you want to rename the repo $New_Repo_Name ?"; then
+				echo "Name change in progress"
+				gh repo rename "$Repo_Selected" "$New_Repo_Name" --yes
+				return 0
+			else
+				echo "Cancelling..."
+				return 1
+			fi
+		;;
+		
+		"Clone a repo")
+			if confirm-action "Do you want to clone one of your repo? "; then
+				Repo_Selected=$(select-repo "Please select a repo you want to clone")
+				while true; do
+					echo "Please select a source Directory: "
+					vared -p "Path: " GA_Filepath
+					echo "You selected this path: $GA_Filepath"
+					if [ -d "$GA_Filepath" ]; then
+						break
+					else
+						echo "Please select a correct path"
+					fi
+				done
+				if confirm-action "Are you sure you want to clone $Repo_Selected here: $GA_Filepath ?"; then
+					echo "Clone in progress...."
+					gh repo clone "$Repo_Selected" "$GA_Filepath"/"$Repo_Selected"
+					return 0
+				else
+					echo "Cancelling..."
+					return 1
+				fi
+			else
+				echo -n "Please enter the github repo's URI you want to clone: "
+				read GH_URI
+				while true; do
+					echo "Please select a source Directory: "
+					vared -p "Path: " GA_Filepath
+					echo "You selected this path: $GA_Filepath"
+					if [ -d "$GA_Filepath" ]; then
+						break
+					else
+						echo "Please select a correct path"
+					fi
+				done
+				if confirm-action "Are you sure you want to clone $GH_URI here: $GA_Filepath ?"; then
+					echo "Clone in progress..."
+					gh repo clone "$GH_URI" "$GA_Filepath"
+					return 0
+				else
+					echo "Cancelling..."
+					return 1
+				fi
+			fi
+		;;
+
+	esac
 }
 
