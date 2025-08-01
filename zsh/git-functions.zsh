@@ -14,10 +14,10 @@
 function select-repo() {
 	local message="$1"
 	local counter=1
-	GH_List=($(gh repo list))
+	GH_List=($(gh repo list --json name --jq '.[].name'))
 	echo "Repository list: "
-	for action in "${GH_List[@]}"; do
-		echo "$counter. $action"
+	for repo in "${GH_List[@]}"; do
+		echo "$counter. $repo"
 		((counter++))
 	done
 	while true; do
@@ -25,8 +25,7 @@ function select-repo() {
 		read Repo_Selection
 		if [[ $Repo_Selection =~ ^[1-9]+$ ]] && [[ $Repo_Selection -ge 1 ]] && [[ $Repo_Selection -le ${#GH_List[@]} ]]; then
 			Repo_line="${GH_List[$Repo_Selection]}"
-			Repo_choice=$(echo "$Repo_line" | awk '{print$1}' | cut -d'/' -f2)
-			echo "$Repo_choice"
+			Repo_choice=$(echo "$Repo_line" | awk '{print $1}' | cut -d'/' -f2)
 			return 0
 		else
 			echo "Invalid selection, please try again"
@@ -49,6 +48,7 @@ function confirm-action() {
 
 # Interactive repo function: Simplify the repository management
 function repo-management() {
+
 	GitAction=("Create a repo" "Delete a repo" "Archive a repo" "Change the visibility" "Rename a repo" "Clone a repo")
 	local counter=1
 	echo "=== Welcome to the repository management ==="
@@ -62,18 +62,22 @@ function repo-management() {
 		echo -n "Select an action (1-${#GitAction[@]}): " 
 		read CHOICE
 		if [[ $CHOICE =~ ^[0-9]+$ ]] && [[ $CHOICE -ge 1 ]] && [[ $CHOICE -le ${#GitAction[@]} ]]; then
-			GA_Action="${GitAction[$CHOICE]}"; break
+			GA_Action="${GitAction[$CHOICE]}"
+			break
 		else 
 			echo "Please select a valid answer"
 		fi
 	done
 	case $GA_Action in 
 		"Create a repo")
+			echo ""
+			echo "=== Create a repo ==="
+			echo ""
 			echo -n "Please choose a name for the repo: " 
 			read GA_Name
+			GA_Filepath=""
 			while true; do
-				echo "Please select a source Directory: "
-				vared -p "Path: " GA_Filepath
+				vared -p "Please select a source Directory: " GA_Filepath
 				echo "You selected this path: $GA_Filepath"
 				if [ -d "$GA_Filepath" ]; then
 					break
@@ -110,7 +114,11 @@ function repo-management() {
 		;;
 
 		"Delete a repo")
-			Repo_Selected=$(select-repo "Please select a repo to delete")
+			echo ""
+			echo "=== Delete a repo ==="
+			echo ""
+			select-repo "Please select a repo to delete"
+			Repo_Selected=$Repo_choice
 			if confirm-action "Are you sure you want to delete the repo named $Repo_Selected ?"; then
 				echo "Deletion in progress...."
 				gh repo delete "$Repo_Selected" --yes
@@ -122,7 +130,11 @@ function repo-management() {
 		;;
 
 		"Archive a repo")	
-			Repo_Selected=$(select-repo "Please select a repo to archive")
+			echo ""
+			echo "=== Archive a repo ==="
+			echo ""
+			select-repo "Please select a repo to archive"	
+			Repo_Selected=$Repo_choice
 			if confirm-action "Are you sure you want to archive the repo named $Repo_Selected ?"; then
 				echo "Archive in progress...."
 				gh repo archive "$Repo_Selected" --yes
@@ -134,7 +146,11 @@ function repo-management() {
 		;;
 
 		"Change the visibility")
-			Repo_Selected=$(select-repo "Please select a repo you want to change the visibility")
+			echo ""
+			echo "=== Change the visibility of a repo ==="
+			echo ""
+			select-repo "Please select a repo you want to change the visibility"
+			Repo_Selected=$Repo_choice
 			CURRENT_VISIBILITY=$(gh repo view "$Repo_Selected" --json visibility --jq '.visibility')
 			if [[ "$CURRENT_VISIBILITY" == "PUBLIC" ]]; then
         			if confirm-action "Change visibility from PUBLIC to PRIVATE?"; then
@@ -150,7 +166,11 @@ function repo-management() {
 		;;
 
 		"Rename a repo")
-			Repo_Selected=$(select-repo "Please select a repo you want to rename")
+			echo ""
+			echo "=== Remane a repo ==="
+			echo ""
+			select-repo "Please select a repo you want to rename"
+			Repo_Selected=$Repo_choice
 			echo -n "Please enter the new repo's name: "
 			read New_Repo_Name
 			if confirm-action "Are you sure you want to rename the repo $New_Repo_Name ?"; then
@@ -164,8 +184,12 @@ function repo-management() {
 		;;
 		
 		"Clone a repo")
+			echo ""
+			echo "=== Clone a repo ==="
+			echo ""
 			if confirm-action "Do you want to clone one of your repo? "; then
-				Repo_Selected=$(select-repo "Please select a repo you want to clone")
+				select-repo "Please select a repo you want to clone"
+				Repo_Selected=$Repo_choice
 				while true; do
 					echo "Please select a source Directory: "
 					vared -p "Path: " GA_Filepath
@@ -207,7 +231,6 @@ function repo-management() {
 				fi
 			fi
 		;;
-
 	esac
 }
 
