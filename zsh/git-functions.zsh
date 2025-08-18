@@ -190,9 +190,9 @@ function repo-management() {
 			if confirm-action "Do you want to clone one of your repo? "; then
 				select-repo "Please select a repo you want to clone"
 				Repo_Selected=$Repo_choice
+				GA_Filepath=""
 				while true; do
-					echo "Please select a source Directory: "
-					vared -p "Path: " GA_Filepath
+					vared -p "Please select a source Directory: " GA_Filepath
 					echo "You selected this path: $GA_Filepath"
 					if [ -d "$GA_Filepath" ]; then
 						break
